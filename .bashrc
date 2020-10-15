@@ -16,8 +16,8 @@ HISTCONTROL=ignoreboth
 shopt -s histappend
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+# HISTSIZE=1000
+# HISTFILESIZE=2000
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -187,17 +187,9 @@ alias open='xdg-open'  # for linux platforms
 export PATH="$PATH:/home/$USER/.local/bin"
 export LANG=en_US.UTF-8 # language settings
 export LC_CTYPE=en_US.UTF-8
-# longer bash history
-HISTSIZE=100000
-HISTFILESIZE=200000
-HISTTIMEFORMAT="%d/%m/%y %T " # date in bash history
 source $(pew shell_config) # pew completions
-
-# Maxime
-# alias startnm='nm-applet &>/dev/null &'
-# alias restartnm='killall nm-applet ; nm-applet &>/dev/null &'
-# alias restartmouse='gksudo modprobe psmouse'
-# alias emptycache='sudo swapoff -a && sudo swapon -a'
-# sysnav vpn
-# alias stopsysnavvpn="sudo systemctl stop openvpn@sysnav-udp1194.service && sudo systemctl stop openvpn@sysnav-tcp443.service"
-# alias startsysnavvpn="sudo systemctl start openvpn@sysnav-udp1194.service && sudo systemctl start openvpn@sysnav-tcp443.service"
+# unlimited bash history, cf https://stackoverflow.com/a/19533853/3218806
+HISTSIZE=
+HISTFILESIZE=
+HISTTIMEFORMAT="%d/%m/%y %T " # date in bash history
+PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
