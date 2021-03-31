@@ -193,3 +193,4 @@ HISTSIZE=
 HISTFILESIZE=
 HISTTIMEFORMAT="%d/%m/%y %T " # date in bash history
 PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+ANSIBLE_STDOUT_CALLBACK=debug # https://stackoverflow.com/a/50017860/3218806
