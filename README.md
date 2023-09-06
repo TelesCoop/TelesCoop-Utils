@@ -7,6 +7,7 @@ Utilitaires à réutiliser dans nos projets.
 - `.bashrc` : un bon bashrc qui permet notamment :
   - l'affiche de la branche courante et de l'env virtuel Python dans la ligne dans le bash, ex `[demometre] maxime@maxime-P14s:~/repos/demometre/demometre-backend (documents)*`
   - un historique sans limite qui affiche l'heure des commandes (pratique pour retrouver ce que l'on a fait)
+- `django_disable_migrations_for_tests.py`: usually for tests, Django creates a test table by going through all migrations. Creating the test database is much faster if migrations are ignored, in this case the test DB is created by looking at the current state of `models.py`. A `TestRunner` is added so that objects can be created before tests, as this can be necessary for some projets (for example here, creating a `Locale` for a `wagtail` project).
 - `frontend_rich_text_field.py` : champ texte à utiliser dans un modèle pour que son contenu soit automatiquement validé par Bleach pour éviter les attaque XSS
 - `.gitignore` : un `.gitignore` classique, avec des morceaux dédiés au back et au front
 - `.inputrc` : permet que dans le bas, quand on appuie une ou plusieurs fois vers flèche du haut / flèche du bas, on navigue dans les dernières entrées qui correspondent, par exemple `python man` + flèche du haut complète en `python manage.py runserver`
