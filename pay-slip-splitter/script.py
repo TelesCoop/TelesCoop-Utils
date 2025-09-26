@@ -6,6 +6,7 @@ import requests
 import yaml
 import shutil
 from PyPDF2 import PdfReader, PdfWriter
+from tqdm import tqdm
 
 # Global constants for directories
 OUTPUT_DIR = "output"
@@ -18,7 +19,6 @@ def initiate_dir():
     # Create directories if they don't exist
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
-
 
 def download_employees():
     """Download employees.yaml from GitHub"""
@@ -82,38 +82,40 @@ def process_pdf(input_file, employees):
         pdf_reader = PdfReader(file)
         total_pages = len(pdf_reader.pages)
 
-        # Process each employee
-        for employee in employees:
-            name = employee['name']
-            full_name = format_name(name)
+        # Create a dictionary to map pages to employees
+        page_to_employees = {}
+        for page_num in tqdm(range(total_pages), desc="Scanning pages", unit="page"):
+            page = pdf_reader.pages[page_num]
+            page_text = page.extract_text()
 
-            if not full_name:
-                continue
+            # Check for each employee's last name on this page
+            for employee in employees:
+                name = employee['name']
+                full_name = format_name(name)
 
-            # Split into last name and full name for searching
-            last_name = full_name.split(' ')[0]
-            pages_to_extract = []
+                if not full_name:
+                    continue
 
-            # Check each page for the employee's last name
-            for page_num in range(1, total_pages + 1):
-                page = pdf_reader.pages[page_num - 1]
-                page_text = page.extract_text()
-
+                last_name = full_name.split(' ')[0]
                 if last_name.lower() in page_text.lower():
-                    print(f"Found {last_name} on page {page_num}")
-                    pages_to_extract.append(page_num - 1)  # PyPDF2 uses 0-based indexing
+                    if page_num not in page_to_employees:
+                        page_to_employees[page_num] = []
+                    page_to_employees[page_num].append((full_name, employee))
 
-            # If pages were found, create a new PDF
-            if pages_to_extract:
-                pdf_writer = PdfWriter()
+        # Create PDFs for each employee
+        employee_pdfs = {}
+        for page_num, employee_list in page_to_employees.items():
+            for full_name, employee in employee_list:
+                if full_name not in employee_pdfs:
+                    employee_pdfs[full_name] = PdfWriter()
+                employee_pdfs[full_name].add_page(pdf_reader.pages[page_num])
 
-                for page_num in pages_to_extract:
-                    pdf_writer.add_page(pdf_reader.pages[page_num])
-
-                output_filename = f"{OUTPUT_DIR}/{date} {full_name}.pdf"
-                with open(output_filename, 'wb') as output_file:
-                    pdf_writer.write(output_file)
-                print(f"Created PDF for {full_name}: {output_filename}")
+        # Save the PDFs
+        for full_name, pdf_writer in employee_pdfs.items():
+            output_filename = f"{OUTPUT_DIR}/{date} {full_name}.pdf"
+            with open(output_filename, 'wb') as output_file:
+                pdf_writer.write(output_file)
+            print(f"Created PDF for {full_name}: {output_filename}")
 
 def cleanup_temp_dir():
     """Clean up temporary directory and its contents"""
