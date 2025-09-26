@@ -69,6 +69,13 @@ def format_name(employee_name):
     last_name = name_parts[0].capitalize()
     return f"{last_name} {first_name}"
 
+def name_in_text(name, text):
+    """Check if name is in text, handling cases with hyphens and line breaks"""
+    # Remove hyphens and whitespace from both name and text for comparison
+    name_clean = re.sub(r'[\s-]', '', name.lower())
+    text_clean = re.sub(r'[\s-]', '', text.lower())
+    return name_clean in text_clean
+
 def process_pdf(input_file, employees):
     """Process the PDF file to extract pages for each employee"""
     # Extract date from PDF content in YYYY-MM format
@@ -76,6 +83,21 @@ def process_pdf(input_file, employees):
 
     # Create output directory if it doesn't exist
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # Pre-format employee names
+    formatted_employees = []
+    for employee in employees:
+        name = employee['name']
+        full_name = format_name(name)
+        if full_name:
+            last_name = full_name.split(' ')[0]
+            first_name = full_name.split(' ')[1] if len(full_name.split(' ')) > 1 else ""
+            formatted_employees.append({
+                'full_name': full_name,
+                'last_name': last_name,
+                'first_name': first_name,
+                'original': employee
+            })
 
     # Read the PDF
     with open(input_file, 'rb') as file:
@@ -88,27 +110,20 @@ def process_pdf(input_file, employees):
             page = pdf_reader.pages[page_num]
             page_text = page.extract_text()
 
-            # Check for each employee's last name on this page
-            for employee in employees:
-                name = employee['name']
-                full_name = format_name(name)
-
-                if not full_name:
-                    continue
-
-                last_name = full_name.split(' ')[0]
-                if last_name.lower() in page_text.lower():
+            # Check for each employee's name on this page
+            for emp in formatted_employees:
+                if name_in_text(emp['last_name'], page_text) and name_in_text(emp['first_name'], page_text):
                     if page_num not in page_to_employees:
                         page_to_employees[page_num] = []
-                    page_to_employees[page_num].append((full_name, employee))
+                    page_to_employees[page_num].append(emp)
 
         # Create PDFs for each employee
         employee_pdfs = {}
         for page_num, employee_list in page_to_employees.items():
-            for full_name, employee in employee_list:
-                if full_name not in employee_pdfs:
-                    employee_pdfs[full_name] = PdfWriter()
-                employee_pdfs[full_name].add_page(pdf_reader.pages[page_num])
+            for emp in employee_list:
+                if emp['full_name'] not in employee_pdfs:
+                    employee_pdfs[emp['full_name']] = PdfWriter()
+                employee_pdfs[emp['full_name']].add_page(pdf_reader.pages[page_num])
 
         # Save the PDFs
         for full_name, pdf_writer in employee_pdfs.items():
