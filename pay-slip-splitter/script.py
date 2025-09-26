@@ -8,7 +8,6 @@ import shutil
 from PyPDF2 import PdfReader, PdfWriter
 
 # Global constants for directories
-INPUT_DIR = "input"
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
 EMPLOYEE_FILE = f"{TEMP_DIR}/employees.yaml"
@@ -119,7 +118,6 @@ def process_pdf(input_file, employees):
 def cleanup_temp_dir():
     """Clean up temporary directory and its contents"""
     if os.path.exists(TEMP_DIR):
-        print(f"\nCleaning up temporary directory: {TEMP_DIR}")
         shutil.rmtree(TEMP_DIR)
 
 def main():
@@ -128,7 +126,7 @@ def main():
 
     try:
         if len(sys.argv) < 2:
-            print("No input file provided")
+            print("Please provide file path")
             sys.exit(1)
 
         input_file = sys.argv[1]
