@@ -5,6 +5,7 @@ import sys
 import requests
 import yaml
 import shutil
+import unicodedata
 from PyPDF2 import PdfReader, PdfWriter
 from tqdm import tqdm
 
@@ -14,6 +15,15 @@ TEMP_DIR = "temp"
 EMPLOYEE_FILE = f"{TEMP_DIR}/employees.yaml"
 EMPLOYEE_FILE_URL = "https://raw.githubusercontent.com/TelesCoop/company-settings/main/employees.yaml"
 DATE_REGEX = r"Période\s*de\s*paie\s*:\s*du\s*(\d{2}/\d{2}/\d{4})"
+
+def remove_accents(input_str):
+    """Remove accents from characters and normalize to lowercase"""
+    if not input_str:
+        return ""
+    # Normalize to NFD form which separates base characters from diacritics
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    # Remove diacritics and convert to lowercase
+    return ''.join([c.lower() for c in nfkd_form if not unicodedata.combining(c)])
 
 def initiate_dir():
     # Create directories if they don't exist
@@ -70,10 +80,13 @@ def format_name(employee_name):
     return f"{last_name} {first_name}"
 
 def name_in_text(name, text):
-    """Check if name is in text, handling cases with hyphens and line breaks"""
-    # Remove hyphens and whitespace from both name and text for comparison
-    name_clean = re.sub(r'[\s-]', '', name.lower())
-    text_clean = re.sub(r'[\s-]', '', text.lower())
+    """Check if name is in text, handling cases with hyphens, line breaks, and accents"""
+    if not name or not text:
+        return False
+
+    # Remove accents, hyphens, and whitespace from both name and text for comparison
+    name_clean = re.sub(r'[\s-]', '', name)
+    text_clean = re.sub(r'[\s-]', '', text)
     return name_clean in text_clean
 
 def process_pdf(input_file, employees):
@@ -94,8 +107,8 @@ def process_pdf(input_file, employees):
             first_name = full_name.split(' ')[1] if len(full_name.split(' ')) > 1 else ""
             formatted_employees.append({
                 'full_name': full_name,
-                'last_name': last_name,
-                'first_name': first_name,
+                'last_name': remove_accents(last_name),
+                'first_name': remove_accents(first_name),
                 'original': employee
             })
 
@@ -108,7 +121,7 @@ def process_pdf(input_file, employees):
         page_to_employees = {}
         for page_num in tqdm(range(total_pages), desc="Scanning pages", unit="page"):
             page = pdf_reader.pages[page_num]
-            page_text = page.extract_text()
+            page_text = remove_accents(page.extract_text())
 
             # Check for each employee's name on this page
             for emp in formatted_employees:
@@ -130,7 +143,7 @@ def process_pdf(input_file, employees):
             output_filename = f"{OUTPUT_DIR}/{date} {full_name}.pdf"
             with open(output_filename, 'wb') as output_file:
                 pdf_writer.write(output_file)
-            print(f"Created PDF for {full_name}: {output_filename}")
+            tqdm.write(f"Created PDF for {full_name}: {output_filename}")
 
 def cleanup_temp_dir():
     """Clean up temporary directory and its contents"""
