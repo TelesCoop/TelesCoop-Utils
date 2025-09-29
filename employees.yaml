@@ -1,3 +1,13 @@
+All employees of TelesCoop.
+
+Use
+- has_ssh_access: false for employees without ssh access
+  (or do not fill ssh_key link)
+- current_employee: false for former employees (for pay slips)
+
+This file is read at least by repo ansible-ssh-config
+and for pay slips (see folder pay-slip-splitter)
+
 ---
 
 employees:
