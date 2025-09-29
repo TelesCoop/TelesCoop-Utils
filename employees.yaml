@@ -1,0 +1,35 @@
+---
+
+employees:
+  - name: antoine.bernier
+    shell: /bin/bash
+    ssh_key: 'https://github.com/Kout95.keys'
+  - name: maxime.bellec
+    shell: /bin/bash
+    ssh_key: 'https://github.com/maxbellec.keys'
+    # has_ssh_access: false
+    # current_employee: false
+  - name: camille.legeron
+    shell: /bin/bash
+    ssh_key: 'https://github.com/CamilleLegeron.keys'
+  - name: alice.andres
+    shell: /bin/bash
+    ssh_key: 'https://github.com/alice-telescoop.keys'
+  - name: quentin.madura
+    shell: /bin/bash
+    ssh_key: 'https://github.com/QuentinMadura.keys'
+  - name: maxime.tribolet
+    shell: /bin/bash
+    ssh_key: 'https://github.com/maximetribolet.keys'
+  - name: marc-antoine.auge
+    shell: /bin/bash
+    ssh_key: 'https://github.com/Marc-AntoineA.keys'
+  - name: ludovic.darmet
+    shell: /bin/bash
+    ssh_key: 'https://github.com/ludovicdmt.keys'
+  - name: geoffrey.dorne
+    shell: /bin/bash
+    has_ssh_access: false
+  - name: clement.feltin
+    shell: /bin/bash
+    has_ssh_access: false
