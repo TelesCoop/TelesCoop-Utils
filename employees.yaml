@@ -1,42 +1,40 @@
-All employees of TelesCoop.
-
-Use
-- has_ssh_access: false for employees without ssh access
-  (or do not fill ssh_key link)
-- current_employee: false for former employees (for pay slips)
-
-This file is read at least by repo ansible-ssh-config
-and for pay slips (see folder pay-slip-splitter)
-
----
+# All employees of TelesCoop.
+#
+# Use:
+# - has_ssh_access: false for employees without ssh access
+#   (or do not fill ssh_key link)
+# - current_employee: false for former employees (for pay slips)
+#
+# This file is read at least by repo ansible-ssh-config
+# and for pay slips (see folder pay-slip-splitter)
 
 employees:
   - name: antoine.bernier
     shell: /bin/bash
-    ssh_key: 'https://github.com/Kout95.keys'
+    ssh_key: "https://github.com/Kout95.keys"
   - name: maxime.bellec
     shell: /bin/bash
-    ssh_key: 'https://github.com/maxbellec.keys'
+    ssh_key: "https://github.com/maxbellec.keys"
     # has_ssh_access: false
     # current_employee: false
   - name: camille.legeron
     shell: /bin/bash
-    ssh_key: 'https://github.com/CamilleLegeron.keys'
+    ssh_key: "https://github.com/CamilleLegeron.keys"
   - name: alice.andres
     shell: /bin/bash
-    ssh_key: 'https://github.com/alice-telescoop.keys'
+    ssh_key: "https://github.com/alice-telescoop.keys"
   - name: quentin.madura
     shell: /bin/bash
-    ssh_key: 'https://github.com/QuentinMadura.keys'
+    ssh_key: "https://github.com/QuentinMadura.keys"
   - name: maxime.tribolet
     shell: /bin/bash
-    ssh_key: 'https://github.com/maximetribolet.keys'
+    ssh_key: "https://github.com/maximetribolet.keys"
   - name: marc-antoine.auge
     shell: /bin/bash
-    ssh_key: 'https://github.com/Marc-AntoineA.keys'
+    ssh_key: "https://github.com/Marc-AntoineA.keys"
   - name: ludovic.darmet
     shell: /bin/bash
-    ssh_key: 'https://github.com/ludovicdmt.keys'
+    ssh_key: "https://github.com/ludovicdmt.keys"
   - name: geoffrey.dorne
     shell: /bin/bash
     has_ssh_access: false
