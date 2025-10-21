@@ -4,7 +4,8 @@ Utilitaires à réutiliser dans nos projets ou utiles indépendamment.
 
 - `api.ts`. Utilitaire pour avoir des requêtes faciles à utiliser, et qui gère les états de chargements, des alertes en cas de succès/échecs et un message général de chargement. A utiliser avec `loadingStore.ts` et `alertStore.ts`.
 - `base64FileUpload.vue` : composant Vue ou morceaux de code à utiliser dans une page / composant Vue pour faire un upload de fichier en base64. Conçu pour fonctionner avec un back qui utiliser `base64FileField.py`
-- `pay-slip-splitter.sh` : découper le PDF de tous les FDP du mois en FDP individuelles
+- `pay-slip-splitter/` : script Python qui découpe un PDF contenant toutes les fiches de paie du mois en fichiers PDF individuels pour chaque employé. Télécharge automatiquement la liste des employés depuis GitHub et nomme les fichiers au format `[YYYY-MM] [Nom Prénom].pdf`. Voir le [README dédié](pay-slip-splitter/README.md) pour plus de détails.
+- `script_to_copy_google_files.py` : script Python pour cloner récursivement un dossier Google Drive (avec tous ses sous-dossiers et fichiers) vers un autre emplacement. Supporte les drives partagés et nécessite l'authentification OAuth Google.
 - `.bashrc` : un bon bashrc qui permet notamment :
   - l'affiche de la branche courante et de l'env virtuel Python dans la ligne dans le bash, ex `[demometre] maxime@maxime-P14s:~/repos/demometre/demometre-backend (documents)*`
   - un historique sans limite qui affiche l'heure des commandes (pratique pour retrouver ce que l'on a fait)
