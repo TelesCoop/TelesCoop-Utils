@@ -386,8 +386,8 @@ def format_name(employee_name):
     name_parts = employee_name.split(".")
     if len(name_parts) != 2:
         return None
-    first_name = name_parts[1].capitalize()
-    last_name = name_parts[0].capitalize()
+    first_name = name_parts[1].title()
+    last_name = name_parts[0].title()
     return f"{last_name} {first_name}"
 
 
@@ -421,10 +421,9 @@ def process_pdf(input_file, employees, output_dir="output"):
         name = employee["name"]
         full_name = format_name(name)
         if full_name:
-            last_name = full_name.split(" ")[0]
-            first_name = (
-                full_name.split(" ")[1] if len(full_name.split(" ")) > 1 else ""
-            )
+            name_parts = name.split(".")
+            last_name = name_parts[0]
+            first_name = name_parts[1] if len(name_parts) > 1 else ""
             formatted_employees.append(
                 {
                     "full_name": full_name,

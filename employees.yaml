@@ -24,12 +24,15 @@ employees:
   - name: marc-antoine.auge
     shell: /bin/bash
     ssh_key: "https://github.com/Marc-AntoineA.keys"
-  - name: ludovic.darmet
+  - name: ludovic.de clermont
     shell: /bin/bash
     ssh_key: "https://github.com/ludovicdmt.keys"
   - name: geoffrey.dorne
     shell: /bin/bash
     has_ssh_access: false
   - name: clement.feltin
+    shell: /bin/bash
+    has_ssh_access: false
+  - name: david.chionne
     shell: /bin/bash
     has_ssh_access: false
