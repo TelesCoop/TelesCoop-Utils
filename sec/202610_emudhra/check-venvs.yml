@@ -1,0 +1,191 @@
+---
+# Vérifie, pour chaque environnement virtuel Python de la machine hôte,
+# qu'aucune dépendance surveillée n'est en dessous de sa version minimale
+# (cf. check-pip.sh).
+#
+# Usage :
+#   ansible-playbook -i hosts sec/202610_emudhra/check-venvs.yml
+# Pour mettre à jour les environnements en échec (à tester d'abord avec --limit) :
+#   ansible-playbook -i hosts sec/202610_emudhra/check-venvs.yml -e upgrade_venvs=true
+- name: Vérifier les dépendances Python des environnements virtuels
+  hosts: all
+  become: true
+  vars:
+    venv_search_paths:
+      - /usr/local
+      - /opt
+      - /srv
+      - /home
+      - /var/www
+    venv_search_depth: 6
+    check_script: /tmp/check-pip.sh
+    # Mise à jour des environnements en échec, désactivée par défaut
+    upgrade_venvs: false
+    upgrade_packages:
+      - pip>=26.2.2
+    # Version minimale de Python requise par pip 26.2.2 (requires_python sur PyPI)
+    pip_min_python: "3.10"
+    # Relance des programmes supervisor d'un environnement quand l'un de ces paquets
+    # y a été mis à jour (pip seul ne nécessite pas de relance)
+    restart_on_packages:
+      - certifi
+    supervisor_conf_dir: /etc/supervisor/conf.d
+
+  tasks:
+    - name: Copier check-pip.sh sur l'hôte
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/check-pip.sh"
+        dest: "{{ check_script }}"
+        mode: "0755"
+
+    - name: Trouver les environnements virtuels (fichiers pyvenv.cfg)
+      ansible.builtin.find:
+        paths: "{{ venv_search_paths }}"
+        patterns: pyvenv.cfg
+        recurse: true
+        depth: "{{ venv_search_depth }}"
+      register: venv_cfgs
+
+    - name: Lancer check-pip.sh dans chaque environnement virtuel
+      ansible.builtin.command: "{{ check_script }}"
+      environment:
+        PATH: "{{ item.path | dirname }}/bin:{{ ansible_env.PATH }}"
+        VIRTUAL_ENV: "{{ item.path | dirname }}"
+      loop: "{{ venv_cfgs.files }}"
+      loop_control:
+        label: "{{ item.path | dirname }}"
+      register: checks_before
+      changed_when: false
+      failed_when: false
+
+    - name: Relever la version de Python de chaque environnement virtuel
+      ansible.builtin.command: "{{ item.path | dirname }}/bin/python -c 'import platform; print(platform.python_version())'"
+      loop: "{{ venv_cfgs.files }}"
+      loop_control:
+        label: "{{ item.path | dirname }}"
+      register: python_versions
+      changed_when: false
+      failed_when: false
+
+    - name: Repérer les environnements dont Python est trop ancien pour pip à jour
+      ansible.builtin.set_fact:
+        old_python_venvs: "{{ python_versions.results | selectattr('rc', 'equalto', 0) | selectattr('stdout', 'version', pip_min_python, '<') | list }}"
+        broken_python_venvs: "{{ python_versions.results | rejectattr('rc', 'equalto', 0) | map(attribute='item.path') | map('dirname') | list }}"
+
+    - name: Signaler les environnements à recréer avec un Python plus récent
+      ansible.builtin.debug:
+        msg: "Python {{ item.stdout }} < {{ pip_min_python }}, pip ne peut pas y être mis à jour : {{ item.item.path | dirname }}"
+      loop: "{{ old_python_venvs }}"
+      loop_control:
+        label: "{{ item.item.path | dirname }}"
+
+    - name: Signaler les environnements dont le Python ne s'exécute pas
+      ansible.builtin.debug:
+        msg: "{{ broken_python_venvs }}"
+      when: broken_python_venvs | length > 0
+
+    - name: Mettre à jour les environnements virtuels en échec
+      when: upgrade_venvs | bool
+      block:
+        # Les environnements sans pip (ex. créés avec uv) sont ignorés
+        - name: Noter la version de pip avant mise à jour
+          ansible.builtin.command: "{{ item.path | dirname }}/bin/python -m pip --version"
+          become_user: "{{ item.pw_name }}"
+          # Les environnements avec un Python trop ancien sont exclus : pip n'y atteindrait pas la version voulue
+          loop: >-
+            {{ checks_before.results | rejectattr('rc', 'equalto', 0) | map(attribute='item')
+               | rejectattr('path', 'in', old_python_venvs | map(attribute='item.path') | list) | list }}
+          loop_control:
+            label: "{{ item.path | dirname }}"
+          register: pip_before
+          changed_when: false
+          failed_when: false
+
+        # En tant que propriétaire de l'environnement, pour ne pas y laisser de fichiers root
+        - name: Mettre à jour les paquets
+          ansible.builtin.command:
+            argv: "{{ [(item.item.path | dirname) ~ '/bin/python', '-m', 'pip', 'install', '--upgrade'] + upgrade_packages }}"
+          become_user: "{{ item.item.pw_name }}"
+          loop: "{{ pip_before.results | selectattr('rc', 'equalto', 0) | list }}"
+          loop_control:
+            label: "{{ item.item.path | dirname }} ({{ item.item.pw_name }})"
+          register: upgrades
+          changed_when: "'Successfully installed' in upgrades.stdout"
+          failed_when: false
+
+        - name: Afficher le résultat des mises à jour (version avant pour retour arrière)
+          ansible.builtin.debug:
+            msg: "{{ ['Avant : ' ~ item.item.stdout] + item.stdout_lines[-1:] + item.stderr_lines }}"
+          loop: "{{ upgrades.results }}"
+          loop_control:
+            label: "{{ item.item.item.path | dirname }}"
+
+        - name: Repérer les environnements où un paquet nécessitant une relance a été mis à jour
+          ansible.builtin.set_fact:
+            venvs_to_restart: >-
+              {{ upgrades.results | selectattr('stdout', 'defined')
+                 | selectattr('stdout', 'search', 'Successfully installed.* (' ~ restart_on_packages | join('|') ~ ')-')
+                 | map(attribute='item.item.path') | map('dirname') | list }}
+
+        # Un programme est associé à un environnement si sa section de configuration
+        # mentionne le chemin de l'environnement (command, directory, environment...)
+        - name: Trouver les programmes supervisor de ces environnements
+          ansible.builtin.shell: |
+            set -o pipefail
+            awk -v venv={{ (item ~ '/') | quote }} '
+              /^\[/ { name = "" }
+              /^\[program:/ { name = substr($0, 10); sub(/\].*/, "", name) }
+              name != "" && index($0, venv) { print name; name = "" }
+            ' {{ supervisor_conf_dir | quote }}/*.conf | sort -u | while read -r prog; do
+              # Nom complet tel que connu de supervisorctl (préfixé par le groupe le cas échéant)
+              supervisorctl status | awk '{ print $1 }' | grep -E "(^|:)${prog}$" || true
+            done
+          args:
+            executable: /bin/bash
+          loop: "{{ venvs_to_restart }}"
+          register: supervisor_programs
+          changed_when: false
+
+        - name: Signaler les environnements mis à jour sans programme supervisor trouvé
+          ansible.builtin.debug:
+            msg: "Aucun programme supervisor trouvé, relance à faire à la main : {{ item.item }}"
+          loop: "{{ supervisor_programs.results | selectattr('stdout_lines', 'equalto', []) | list }}"
+          loop_control:
+            label: "{{ item.item }}"
+
+        - name: Relancer les programmes supervisor concernés
+          ansible.builtin.command: "supervisorctl restart {{ item | quote }}"
+          loop: "{{ supervisor_programs.results | map(attribute='stdout_lines') | flatten | unique }}"
+
+        - name: Relancer check-pip.sh après mise à jour
+          ansible.builtin.command: "{{ check_script }}"
+          environment:
+            PATH: "{{ item.path | dirname }}/bin:{{ ansible_env.PATH }}"
+            VIRTUAL_ENV: "{{ item.path | dirname }}"
+          loop: "{{ venv_cfgs.files }}"
+          loop_control:
+            label: "{{ item.path | dirname }}"
+          register: checks_after
+          changed_when: false
+          failed_when: false
+
+    - name: Retenir le dernier résultat des vérifications
+      ansible.builtin.set_fact:
+        checks: "{{ checks_after if upgrade_venvs | bool else checks_before }}"
+
+    - name: Afficher le résultat par environnement virtuel
+      ansible.builtin.debug:
+        msg: "{{ [('OK' if item.rc == 0 else 'ÉCHEC') ~ ' : ' ~ (item.item.path | dirname)] + item.stdout_lines + item.stderr_lines }}"
+      loop: "{{ checks.results }}"
+      loop_control:
+        label: "{{ item.item.path | dirname }}"
+
+    - name: Supprimer check-pip.sh de l'hôte
+      ansible.builtin.file:
+        path: "{{ check_script }}"
+        state: absent
+
+    - name: Échouer si au moins un environnement virtuel est problématique
+      ansible.builtin.fail:
+        msg: "Environnements problématiques : {{ checks.results | rejectattr('rc', 'equalto', 0) | map(attribute='item.path') | map('dirname') | join(', ') }}"
+      when: checks.results | rejectattr('rc', 'equalto', 0) | list | length > 0
