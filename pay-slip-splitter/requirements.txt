@@ -1,8 +1,8 @@
 PyPDF2==3.0.1
-requests==2.31.0
-pyyaml==6.0.1
-tqdm==4.66.1
-google-auth==2.23.0
-google-auth-oauthlib==1.1.0
-google-auth-httplib2==0.1.1
-google-api-python-client==2.100.0
+requests==2.34.2
+pyyaml==6.0.3
+tqdm==4.70.1
+google-auth==2.62.1
+google-auth-oauthlib==1.5.0
+google-auth-httplib2==0.4.4
+google-api-python-client==2.201.0
